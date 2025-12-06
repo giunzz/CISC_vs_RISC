@@ -18,6 +18,7 @@ MAIN:
 
     SETB P3.0
     SETB P3.3
+	SETB P3.1
 
     CLR FLAG_STOP
     MOV R0, #00H
@@ -84,8 +85,8 @@ DELAY_10MS:
 D1:
     MOV R6, #250     
 D2:
-    DJNZ R6, D2
-    DJNZ R5, D1
+    DJNZ R6, D2 ; 500
+    DJNZ R5, D1 
     RET
 
 DELAY_VARIABLE:

@@ -13,11 +13,13 @@ Chu kỳ lệnh, số lệnh , pieline, MIPS ,CPI,...
 CPU time 
 
 
-### Chú thích code 
+### Chú thích code 8051 asm
 P3.2: Ngắt (đứng yên 4 led sáng)
-P3.0 Tang T
-P3.3 Giam t
-P3.1 Quy lai ban dau 
+P3.0 giam T
+P3.3 Tang t
+P3.1 Quay lai ban dau 
 
 Delay 10ms -> inner 250x2 -> out 500x20 
 T_delay : mac dinh 100 -> tong 1s (dùng tăng giảm)
+
+Các btn ở mức cao ấn xuống mức thấp
