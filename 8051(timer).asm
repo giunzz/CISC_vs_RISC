@@ -1,51 +1,44 @@
 SEGMENT_PORT EQU P0
 VALUE        DATA 30H
-FLAG_STOP    BIT 20H
-T_DELAY      DATA 32H
-
+FLAG_STOP    BIT 20H       
+T_DELAY DATA 32H  ; so lan goi 10ms
 ORG 0000H
     LJMP MAIN
-
 ORG 0003H
 INT0_ISR:
-    SETB FLAG_STOP
+    SETB FLAG_STOP         ; STOP = 1
     RETI
-
 MAIN:
     SETB IT0
     SETB EX0
     SETB EA
-
-    SETB P3.0
-    SETB P3.3
-
-    CLR FLAG_STOP
-    MOV R0, #00H
-    MOV T_DELAY, #100
-
+	SETB P3.0
+	SETB P3.3
+    CLR FLAG_STOP         
+    MOV R0,#00H
+	MOV T_DELAY, #100
+	
 TATDAN_LOOP:
-    JNB P3.0, DEC_T
-    JNB P3.3, INC_T
-    JB FLAG_STOP, BNT_C
+	JNB P3.0, DEC_T
+	JNB P3.0, INC_T
+	JB FLAG_STOP, BNT_C  
 
 DEC_T:
     MOV A, T_DELAY
-    SUBB A, #50
-    JC LIMIT_T
+    SUBB A, #50        ; T = T – 500 ms
+    JC LIMIT_T ; jum neu am
     MOV T_DELAY, A
     SJMP SKIP_T
 
 LIMIT_T:
-    MOV T_DELAY, #50
-
+    MOV T_DELAY, #50   
 INC_T:
-    MOV A, T_DELAY
-    ADD A, #50
-    CJNE A, #200, LIMIT2
-    MOV A, #200
-LIMIT2:
+	MOV A, T_DELAY
+	ADD A, #50 ; T = + 500ms
+	CJNE A, #200, LIMIT
+	MOV A, #200
+LIMIT:
     MOV T_DELAY, A
-
 SKIP_T:
     MOV P2, R0
     SETB P2.4
@@ -60,12 +53,12 @@ SKIP_T:
     ORL A, #01H
     MOV R0, A
 
-    CJNE R0, #01FH, TATDAN_LOOP
-    MOV R0, #00H
+    CJNE R0,#01FH,TATDAN_LOOP
+    MOV R0,#00H
     SJMP TATDAN_LOOP
 
 BNT_C:
-    MOV P2, #00H
+    MOV P2,#000H
     SETB P2.4
     SETB P2.5
     SETB P2.6
@@ -73,21 +66,21 @@ BNT_C:
 CHECK_C:
     JNB P3.1, BNT_D
     SJMP CHECK_C
-
 BNT_D:
-    CLR FLAG_STOP
-    MOV R0, #00H
+    CLR FLAG_STOP        
+    MOV R0,#00H
     SJMP TATDAN_LOOP
 
 DELAY_10MS:
-    MOV R5, #20      
-D1:
-    MOV R6, #250     
-D2:
-    DJNZ R6, D2
-    DJNZ R5, D1
+    MOV TMOD,#01H
+    MOV TH0,#0D8H
+    MOV TL0,#0F0H
+    SETB TR0
+WT0:
+    JNB TF0,WT0
+    CLR TR0
+    CLR TF0
     RET
-
 DELAY_VARIABLE:
     MOV R7, T_DELAY
 DVAR:

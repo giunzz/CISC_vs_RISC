@@ -11,3 +11,13 @@ Mô phỏng chương trình theo 8051 tập lệnh CISC và PIC16F8(RISC)
 ### So sánh 
 Chu kỳ lệnh, số lệnh , pieline, MIPS ,CPI,...
 CPU time 
+
+
+### Chú thích code 
+P3.2: Ngắt (đứng yên 4 led sáng)
+P3.0 Tang T
+P3.3 Giam t
+P3.1 Quy lai ban dau 
+
+Delay 10ms -> inner 250x2 -> out 500x20 
+T_delay : mac dinh 100 -> tong 1s (dùng tăng giảm)
