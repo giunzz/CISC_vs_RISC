@@ -2,13 +2,13 @@
 
 ## 1. Giới thiệu
 
-- Link tải KeilC (AT89C51) và Proteus:  
-  [KeilC & Proteus](https://drive.google.com/drive/folders/1FDUzu3VYYfmMQK9li1eveh-XFw6xOYeM?usp=sharing)
+- Link tải KeilC (AT89C51) và Proteus:  [KeilC & Proteus](https://drive.google.com/drive/folders/1FDUzu3VYYfmMQK9li1eveh-XFw6xOYeM?usp=sharing)
 
 - Lập trình vi điều khiển 8051 bằng ASM và C.
 
-- Kit thực hành Proteus:  
-  [KitTT_ver8.17](https://github.com/giunzz/COOA_LABS/blob/main/proteus/kitTT_ver8.17.pdsprj)
+- Kit thực hành Proteus:  [KitTT_ver8.17](https://github.com/giunzz/COOA_LABS/blob/main/proteus/kitTT_ver8.17.pdsprj)
+
+- Bảng chuyển đổi cơ số: [Link](https://github.com/giunzz/COOA_LABS/blob/main/Bang_Chuyen_Doi_Co_So.xlsx)
 
   Lưu ý sử dụng chân:
   - LED đơn: **P1**
