@@ -101,19 +101,16 @@ void Effect_SangDon() {
         sd_limit = 7;
         step = 1;       
     }
-
-    // Logic sang don
     P2 = sd_mask & ~(1 << sd_run);
 
     sd_run++;
 
     if (sd_run > sd_limit) {
-        // Da chay den buc tuong -> Luu lai vi tri
         sd_mask &= ~(1 << sd_limit);
         
-        sd_limit--; // Dich buc tuong lai gan hon
+        sd_limit--; 
         
-        sd_run = 0; // Reset chay lai tu dau
+        sd_run = 0; 
 
         if (sd_limit < 0) {
             sd_limit = 7;
