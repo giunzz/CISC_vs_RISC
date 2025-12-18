@@ -75,7 +75,7 @@ Code:  [KT C – Lần 1](https://github.com/giunzz/COOA_LABS/blob/main/code_c/k
 Code:  [KT C – Lần 2](https://github.com/giunzz/COOA_LABS/blob/main/code_c/KT3.c)
 
 
-## 5. Kiểm tra C – Lần 2
+## 6. Kiểm tra C – Lần 2
 1. Hiện trạng thái 3 tải: Đèn, quạt, máy lạnh lên Terminal (Mặc định: OFF)
 (Cập nhật mới khi có thay đổi)
 
