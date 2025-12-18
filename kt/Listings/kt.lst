@@ -1,4 +1,4 @@
-C51 COMPILER V9.60.0.0   KT                                                                12/18/2025 16:24:11 PAGE 1   
+C51 COMPILER V9.60.0.0   KT                                                                12/18/2025 23:03:15 PAGE 1   
 
 
 C51 COMPILER V9.60.0.0, COMPILATION OF MODULE KT
@@ -16,209 +16,233 @@ line level    source
    6          sbit LED1 = P1^0;
    7          volatile unsigned int period1 = 1000;  
    8          volatile unsigned int ms_tick = 0;
-   9          
-  10          /* Button polling */
-  11          sbit BTN1 = P3^4;
-  12          /* Button interrupt */
-  13          sbit BTN2 = P3^2;   
-  14          sbit BTN3 = P3^3;   
-  15          
-  16          unsigned int den = 0,quat = 0, maylanh = 0;
-  17          unsigned char cnt = 0;
-  18          char cmd[5];
-  19          unsigned char uart_index = 0;
-  20          void UART_Init(void) {
-  21   1          SCON = 0x50;        // UART mode 1, enable receiver
-  22   1          TMOD &= 0x0F;       // Clear Timer1 config
-  23   1          TMOD |= 0x20;       // Timer1 mode 2
-  24   1          TH1 = 0xFD;         // Baud 9600 (11.0592 MHz)
-  25   1          TR1 = 1;            // Start Timer1
-  26   1          TI = 1;             // Allow first transmit
-  27   1      }
-  28          
-  29          void UART_SendChar(char c) {
-  30   1          while (!TI);   
-  31   1          TI = 0;        
-  32   1          SBUF = c;      
-  33   1      }
-  34          
-  35          void UART_SendString(char *str) {
-  36   1          while (*str) {
-  37   2              UART_SendChar(*str);  
-  38   2              str++;                
-  39   2          }
-  40   1      }
-  41          
-  42          void Display_Menu(void) {
-  43   1          UART_SendString("\r\n===== TRANG THAI =====\r\n");
-  44   1          if (den == 0) UART_SendString("- Trang thai den OFF \r\n");
-  45   1          else UART_SendString("- Trang thai den ON \r\n");
-  46   1          if (quat == 0) UART_SendString("- Trang thai quat OFF \r\n");
-  47   1          else UART_SendString("- Trang thai quat ON \r\n");
-  48   1          if(maylanh == 0) UART_SendString("- Trang thai maylanh OFF \r\n");
-  49   1          else UART_SendString("- Trang thai maylanh ON \r\n");
-  50   1          UART_SendString("================================\r\n");
-  51   1          UART_SendString("\r\n=====DIEU KHIEN CHU KY LED=====\r\n");
-  52   1          UART_SendString("Nhap chu ky (VD: 2000, 3100, 5000) ms \r\n");
-  53   1      }
-  54          void Process_Command(void)
-C51 COMPILER V9.60.0.0   KT                                                                12/18/2025 16:24:11 PAGE 2   
+   9          #define CMD_MAX_LEN 6
+  10          
+  11          /* Button polling */
+  12          sbit BTN1 = P3^4;
+  13          /* Button interrupt */
+  14          sbit BTN2 = P3^2;   
+  15          sbit BTN3 = P3^3;   
+  16          
+  17          unsigned int den = 0,quat = 0, maylanh = 0;
+  18          unsigned char cnt = 0;
+  19          char cmd[CMD_MAX_LEN];
+  20          unsigned char uart_index = 0;
+  21          void UART_Init(void) {
+  22   1          SCON = 0x50;        // UART mode 1, enable receiver
+  23   1          TMOD &= 0x0F;       // Clear Timer1 config
+  24   1          TMOD |= 0x20;       // Timer1 mode 2
+  25   1          TH1 = 0xFD;         // Baud 9600 (11.0592 MHz)
+  26   1          TR1 = 1;            // Start Timer1
+  27   1          TI = 1;             // Allow first transmit
+  28   1      }
+  29          
+  30          void UART_SendChar(char c) {
+  31   1          while (!TI);   
+  32   1          TI = 0;        
+  33   1          SBUF = c;      
+  34   1      }
+  35          
+  36          void UART_SendString(char *str) {
+  37   1          while (*str) {
+  38   2              UART_SendChar(*str);  
+  39   2              str++;                
+  40   2          }
+  41   1      }
+  42          
+  43          void Display_Menu(void) {
+  44   1          UART_SendString("\r\n===== TRANG THAI =====\r\n");
+  45   1          if (den == 0) UART_SendString("- Trang thai den OFF \r\n");
+  46   1          else UART_SendString("- Trang thai den ON \r\n");
+  47   1          if (quat == 0) UART_SendString("- Trang thai quat OFF \r\n");
+  48   1          else UART_SendString("- Trang thai quat ON \r\n");
+  49   1          if(maylanh == 0) UART_SendString("- Trang thai maylanh OFF \r\n");
+  50   1          else UART_SendString("- Trang thai maylanh ON \r\n");
+  51   1          UART_SendString("================================\r\n");
+  52   1          UART_SendString("\r\n=====DIEU KHIEN CHU KY LED=====\r\n");
+  53   1          UART_SendString("Nhap chu ky (VD: 2000, 310, 50) + nhan enter ms \r\n");
+  54   1      }
+C51 COMPILER V9.60.0.0   KT                                                                12/18/2025 23:03:15 PAGE 2   
 
-  55          {
-  56   1          Display_Menu();
-  57   1          UART_SendString("\r\nSet OK\r\n");
-  58   1      }
-  59          
-  60          void int0_isr(void) interrupt 0
-  61          {
-  62   1          den = ~den; 
-  63   1          Process_Command();
-  64   1      }
-  65          void int1_isr(void) interrupt 2
-  66          {
-  67   1          quat = ~quat; 
-  68   1          Process_Command();
-  69   1      }
-  70          void delay_ms(unsigned int ms)
-  71          {
-  72   1          unsigned int i, j;
-  73   1          for (i = 0; i < ms; i++)
-  74   1              for (j = 0; j < 123; j++);
-  75   1      }
-  76          
-  77          void scan_buttons(void)
-  78          {
-  79   1          if (BTN1 == 0) { 
-  80   2            delay_ms(20); 
-  81   2            if (BTN1 == 0) 
-  82   2              { 
-  83   3              maylanh = ~maylanh; 
-  84   3              Process_Command();
-  85   3              while (BTN1 == 0); 
-  86   3              } 
-  87   2          }
-  88   1            
-  89   1      }
-  90          unsigned char digit_patterns[] = {
-  91              0x3F,   // 0
-  92              0x06,   // 1
-  93              0x5B,   // 2
-  94              0x4F,   // 3
-  95              0x66,   // 4
-  96              0x6D,   // 5
-  97              0x7D,   // 6
-  98              0x07,   // 7
-  99              0x7F,   // 8
- 100              0x6F    // 9
- 101          };
- 102          void display_digit(unsigned char index, unsigned char value, unsigned char dot)
- 103          {
- 104   1          if (dot == 0){
- 105   2            SELECT_PORT = (index << 2);
- 106   2            SEGMENT_PORT = digit_patterns[value];
- 107   2            delay_ms(1);
- 108   2          }
- 109   1          else 
- 110   1          {
- 111   2            SELECT_PORT = (index << 2);
- 112   2            SEGMENT_PORT = digit_patterns[value] | 0x80;
- 113   2            delay_ms(1);
- 114   2          }
- 115   1            
- 116   1      }
-C51 COMPILER V9.60.0.0   KT                                                                12/18/2025 16:24:11 PAGE 3   
+  55          void Process_Command(void)
+  56          {
+  57   1          Display_Menu();
+  58   1          UART_SendString("\r\nSet OK\r\n");
+  59   1      }
+  60          
+  61          void int0_isr(void) interrupt 0
+  62          {
+  63   1          den = ~den; 
+  64   1          Process_Command();
+  65   1      }
+  66          void int1_isr(void) interrupt 2
+  67          {
+  68   1          quat = ~quat; 
+  69   1          Process_Command();
+  70   1      }
+  71          void delay_ms(unsigned int ms)
+  72          {
+  73   1          unsigned int i, j;
+  74   1          for (i = 0; i < ms; i++)
+  75   1              for (j = 0; j < 123; j++);
+  76   1      }
+  77          
+  78          void scan_buttons(void)
+  79          {
+  80   1          if (BTN1 == 0) { 
+  81   2            delay_ms(20); 
+  82   2            if (BTN1 == 0) 
+  83   2              { 
+  84   3              maylanh = ~maylanh; 
+  85   3              Process_Command();
+  86   3              while (BTN1 == 0); 
+  87   3              } 
+  88   2          }
+  89   1            
+  90   1      }
+  91          unsigned char digit_patterns[] = {
+  92              0x3F,   // 0
+  93              0x06,   // 1
+  94              0x5B,   // 2
+  95              0x4F,   // 3
+  96              0x66,   // 4
+  97              0x6D,   // 5
+  98              0x7D,   // 6
+  99              0x07,   // 7
+ 100              0x7F,   // 8
+ 101              0x6F    // 9
+ 102          };
+ 103          void display_digit(unsigned char index, unsigned char value, unsigned char dot)
+ 104          {
+ 105   1          if (dot == 0){
+ 106   2            SELECT_PORT = (index << 2);
+ 107   2            SEGMENT_PORT = digit_patterns[value];
+ 108   2            delay_ms(1);
+ 109   2          }
+ 110   1          else 
+ 111   1          {
+ 112   2            SELECT_PORT = (index << 2);
+ 113   2            SEGMENT_PORT = digit_patterns[value] | 0x80;
+ 114   2            delay_ms(1);
+ 115   2          }
+ 116   1            
+C51 COMPILER V9.60.0.0   KT                                                                12/18/2025 23:03:15 PAGE 3   
 
- 117          void timer0_isr(void) interrupt 1
- 118          {
- 119   1          TH0 = 0xFC;
- 120   1          TL0 = 0x66;   
- 121   1          ms_tick++;
- 122   1      }
- 123          
+ 117   1      }
+ 118          void timer0_isr(void) interrupt 1
+ 119          {
+ 120   1          TH0 = 0xFC;
+ 121   1          TL0 = 0x66;   
+ 122   1          ms_tick++;
+ 123   1      }
  124          
- 125          void timer0_init(void)
- 126          {
- 127   1          TMOD |= 0x01;  
- 128   1          TH0 = 0xFC;
- 129   1          TL0 = 0x66;
- 130   1          ET0 = 1;
- 131   1          TR0 = 1;
- 132   1      }
- 133          unsigned int state_timer = 0;
- 134          unsigned int remain_s;
- 135          void small_delay()
- 136          {
- 137   1          unsigned int i;
- 138   1          for(i = 0; i < 200; i++);
- 139   1      }
- 140          void Process_CK(void)
- 141          {
- 142   1          unsigned int val  = (cmd[0]-'0') * 1000 + (cmd[1]-'0')*100 + (cmd[2]-'0') * 10 + (cmd[3]-'0');
- 143   1          unsigned int new_period = val/2 ;
- 144   1      
- 145   1          period1 = new_period;
- 146   1      
- 147   1          UART_SendString("\r\nSet OK\r\n");
- 148   1      }
- 149          void UART_Receive_Handler(void)
- 150          {
- 151   1          if(RI)
- 152   1          {
- 153   2              RI = 0;
- 154   2              cmd[uart_index] = SBUF;   
- 155   2              uart_index++;
- 156   2              if(uart_index >= 4)
- 157   2              {
- 158   3                  Process_CK();     
- 159   3                  uart_index = 0;        
- 160   3              }
- 161   2          }
+ 125          
+ 126          void timer0_init(void)
+ 127          {
+ 128   1          TMOD |= 0x01;  
+ 129   1          TH0 = 0xFC;
+ 130   1          TL0 = 0x66;
+ 131   1          ET0 = 1;
+ 132   1          TR0 = 1;
+ 133   1      }
+ 134          unsigned int state_timer = 0;
+ 135          unsigned int remain_s;
+ 136          void small_delay()
+ 137          {
+ 138   1          unsigned int i;
+ 139   1          for(i = 0; i < 200; i++);
+ 140   1      }
+ 141          unsigned int parse_uint(char *s)
+ 142          {
+ 143   1          unsigned int val = 0;
+ 144   1          while(*s)
+ 145   1          {
+ 146   2              if(*s < '0' || *s > '9') break;
+ 147   2              val = val * 10 + (*s - '0');
+ 148   2              s++;
+ 149   2          }
+ 150   1          return val;
+ 151   1      }
+ 152          
+ 153          void Process_CK(void)
+ 154          {
+ 155   1          unsigned int val = parse_uint(cmd);
+ 156   1          period1 = val / 2;
+ 157   1      
+ 158   1          UART_SendString("\r\nSet chu ky = ");
+ 159   1          sprintf(cmd, "%u", val);
+ 160   1          UART_SendString(cmd);
+ 161   1          UART_SendString(" ms\r\n");
  162   1      }
- 163          
- 164          void main(void)
- 165          {
- 166   1          
- 167   1          UART_Init();
- 168   1          Display_Menu();
- 169   1          den = quat = maylanh = 0;
- 170   1          LED1 = 0;
- 171   1          IT0 = 1;   
- 172   1          IT1 = 1;  
- 173   1          EX0 = 1;   
- 174   1          EX1 = 1;   
- 175   1          EA  = 1;  
- 176   1          timer0_init();
- 177   1          while (1)
- 178   1          {
-C51 COMPILER V9.60.0.0   KT                                                                12/18/2025 16:24:11 PAGE 4   
+ 163          void UART_Receive_Handler(void)
+ 164          {
+ 165   1          if(RI)
+ 166   1          {
+ 167   2              char c;
+ 168   2              RI = 0;
+ 169   2              c = SBUF;
+ 170   2      
+ 171   2              if(c == '\r' || c == '\n')
+ 172   2              {
+ 173   3                  cmd[uart_index] = '\0';   
+ 174   3                  Process_CK();
+ 175   3                  uart_index = 0;
+ 176   3              }
+ 177   2              else
+ 178   2              {
+C51 COMPILER V9.60.0.0   KT                                                                12/18/2025 23:03:15 PAGE 4   
 
- 179   2              scan_buttons(); 
- 180   2              small_delay();
- 181   2              state_timer++;
- 182   2              UART_Receive_Handler();
- 183   2              if(state_timer >= period1/10)
- 184   2              {
- 185   3                   LED1 = ~LED1;
- 186   3                   state_timer = 0;
- 187   3              }
- 188   2                  remain_s = period1;
- 189   2                  display_digit(0,remain_s%10,0);
- 190   2                  remain_s = remain_s/10;
- 191   2                  display_digit(1,remain_s%10,0);
- 192   2                  remain_s = remain_s / 10;
- 193   2                  display_digit(2,remain_s %10,0);
- 194   2                  remain_s = remain_s / 10;
- 195   2                  display_digit(3,remain_s,0);
- 196   2          }
- 197   1      }
+ 179   3                  if(uart_index < CMD_MAX_LEN - 1)
+ 180   3                  {
+ 181   4                      cmd[uart_index++] = c;
+ 182   4                  }
+ 183   3              }
+ 184   2          }
+ 185   1      }
+ 186          
+ 187          
+ 188          void main(void)
+ 189          {
+ 190   1          
+ 191   1          UART_Init();
+ 192   1          Display_Menu();
+ 193   1          den = quat = maylanh = 0;
+ 194   1          LED1 = 0;
+ 195   1          IT0 = 1;   
+ 196   1          IT1 = 1;  
+ 197   1          EX0 = 1;   
+ 198   1          EX1 = 1;   
+ 199   1          EA  = 1;  
+ 200   1          timer0_init();
+ 201   1          while (1)
+ 202   1          {
+ 203   2              scan_buttons(); 
+ 204   2              small_delay();
+ 205   2              state_timer++;
+ 206   2              UART_Receive_Handler();
+ 207   2              if(state_timer >= period1/10)
+ 208   2              {
+ 209   3                   LED1 = ~LED1;
+ 210   3                   state_timer = 0;
+ 211   3              }
+ 212   2                  remain_s = period1;
+ 213   2                  display_digit(0,remain_s%10,0);
+ 214   2                  remain_s = remain_s/10;
+ 215   2                  display_digit(1,remain_s%10,0);
+ 216   2                  remain_s = remain_s / 10;
+ 217   2                  display_digit(2,remain_s %10,0);
+ 218   2                  remain_s = remain_s / 10;
+ 219   2                  display_digit(3,remain_s,0);
+ 220   2          }
+ 221   1      }
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =    731    ----
-   CONSTANT SIZE    =    301    ----
+   CODE SIZE        =    799    ----
+   CONSTANT SIZE    =    336    ----
    XDATA SIZE       =   ----    ----
    PDATA SIZE       =   ----    ----
-   DATA SIZE        =     31       1
+   DATA SIZE        =     32       7
    IDATA SIZE       =   ----    ----
    BIT SIZE         =   ----    ----
 END OF MODULE INFORMATION.
