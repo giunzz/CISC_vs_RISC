@@ -26,9 +26,8 @@ unsigned char digit_patterns[] = {
     0x6F    // 9
 };
 
-// 8 values of led7seg
-unsigned char led7seg[8] = {0,1,2,3,4,5,6,7};
-unsigned char index   = 0;
+unsigned char led7seg[2] = {0, 0};
+unsigned char index = 0;
 
 unsigned char pattern_led[] = {
     0xFF,0xFE,0xFC,0xF8,0xF0,0xE0,0xC0,0x80, 0x00
@@ -36,19 +35,14 @@ unsigned char pattern_led[] = {
 
 void ISR_Timer0() interrupt 1
 {
-		unsigned char display_code;
     TH0 = 0xF8;
     TL0 = 0x30;
 
-    SEGMENT_PORT = 0x00; 
-    if (index < 2) {
-        SELECT_PORT = (index << 2);
-        display_code = digit_patterns[led7seg[index]];
-        SEGMENT_PORT = display_code;
-        index++;
-    } else {
-        index = 0;
-    }
+    SELECT_PORT = (1 << (index + 2));
+    SEGMENT_PORT = digit_patterns[led7seg[index]];
+
+    index++;
+    if (index >= 2) index = 0;
 }
 void update_display(unsigned char led_value, unsigned char cnt)
 {
@@ -59,24 +53,22 @@ void update_display(unsigned char led_value, unsigned char cnt)
 void setup_led7seg_timer0_2ms(void)
 {
 	
-	  SEGMENT_PORT = 0x00; 
-		index = 0;
-		TMOD &= 0xF0; 
-    TMOD |= 0x01;
-    TH0 = 0xF8;   
+	SEGMENT_PORT = 0x00; 
+	index = 0;	
+    TMOD = 0x01;  // Mode 1: 16-bit timer
+    TH0 = 0xF8;   // Initial load
     TL0 = 0x30;
-    IE  = 0x82;   
-    TR0 = 1;     
+    IE  = 0x82;   // Enable global + Timer0 interrupt
+    TR0 = 1;      // Start Timer0
 }
+
 
 void effect_sangdan()
 {
     unsigned char i;
-		unsigned char old = cnt;
     for(i=0;i<9;i++){
-				if(cnt != old) break; 
         P1 = pattern_led[i];
-				update_display(i,cnt);
+		update_display(i,cnt);
         delay_ms(200);
     }
 }
@@ -84,9 +76,7 @@ void effect_sangdan()
 void effect_tatdan()
 {
     char i;
-		unsigned char old = cnt;
     for(i=8; i >= 0; i--){
-				if(cnt != old) break; 
         P1 = pattern_led[i];
         update_display(i,cnt);
         delay_ms(200);
@@ -96,13 +86,11 @@ void effect_tatdan()
 void effect_choptat()
 {
     unsigned char i;
-		unsigned char old = cnt;
     for(i=0;i<8;i++){
-				if(cnt != old) break; 
         P1 = 0x00;
         update_display(0,cnt);
         delay_ms(200);
-				if(cnt != old) break; 
+
         P1 = 0xFF;
         update_display(8,cnt);
         delay_ms(200);
@@ -110,16 +98,9 @@ void effect_choptat()
 }
 
 // P3^2
-void external0_isr(void) interrupt 0
-{
-    cnt++;
-    if(cnt > 3) cnt = 0;
-
-}
-
-void external1_isr(void) interrupt 2
-{
-    cnt = (cnt + 3) % 4;
+void external0_isr(void) interrupt 0 {
+	cnt++;
+	if (cnt == 4) cnt = 0;
 }
 void UART_Init(void) {
     SCON = 0x50;        // UART mode 1, enable receiver
@@ -165,28 +146,32 @@ void UART_Receive_Handler(void)
 void scan_led()
 {
 	effect_sangdan();
+	UART_Receive_Handler();
+
 	effect_tatdan();
+	UART_Receive_Handler();
+
 	effect_choptat();
+	UART_Receive_Handler();
+
 }
 
 void main()
 {
+    IT0 = 1;   
+    EX0 = 1;   
+    EA  = 1; 	
 	UART_Init();
+	setup_led7seg_timer0_2ms();
     UART_SendString("\r\n=== DIEU KHIEN LED QUA UART ===\r\n");
     UART_SendString("Nhap lenh (VD: 0,1,2,3)\r\n");
-		setup_led7seg_timer0_2ms();
-		IT0 = 1;  
-    IT1 = 1;   
-    EX0 = 1;   
-    EX1 = 1;   
-    EA  = 1;    
-		cnt = 0;
+	
     while (1)
     {
-			UART_Receive_Handler();
-			if(cnt == 0) scan_led();
-			if(cnt == 1) effect_sangdan();
-			if(cnt == 2) effect_tatdan();
-			if(cnt == 3) effect_choptat();
+		UART_Receive_Handler();
+		if(cnt == 0) scan_led();
+		if(cnt == 1) effect_sangdan();
+		if(cnt == 2) effect_tatdan();
+		if(cnt == 3) effect_choptat();
     }
 }

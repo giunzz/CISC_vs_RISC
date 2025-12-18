@@ -1,4 +1,4 @@
-C51 COMPILER V9.60.0.0   KT                                                                12/17/2025 23:26:26 PAGE 1   
+C51 COMPILER V9.60.0.0   KT                                                                12/18/2025 10:48:29 PAGE 1   
 
 
 C51 COMPILER V9.60.0.0, COMPILATION OF MODULE KT
@@ -8,297 +8,76 @@ COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE kt.c OPTIMIZE(8,SPEED) BROWSE DE
 
 line level    source
 
-   1          #include <REGX51.H>
-   2          
-   3          
-   4          #define SEGMENT_PORT P0  
-   5          #define SELECT_PORT  P2 
-   6          
-   7          sbit LED1 = P1^0;
-   8          sbit LED2 = P1^1;
-   9          sbit LED3 = P1^2;
+   1          #include <REGX51.H>   
+   2          #define SEGMENT_PORT P0  
+   3          #define SELECT_PORT  P2   
+   4          
+   5          void delay_ms(unsigned int ms) {
+   6   1          unsigned int i, j;
+   7   1          for (i = 0; i < ms; i++)
+   8   1              for (j = 0; j < 123; j++);
+   9   1      }
   10          
-  11          
-  12          #define T1 500
-  13          #define T2 200
-  14          #define T3 300
-  15          volatile unsigned int period = 100;   
-  16          volatile unsigned int ms_tick = 0;
-  17          char cmd[3];
-  18          unsigned char uart_index = 0;
-  19          
-  20          typedef enum {
-  21              STATE_LED1,
-  22              STATE_LED2,
-  23              STATE_LED3
-  24          } led_state_t;
-  25          
-  26          typedef enum {
-  27              MODE_NORMAL = 0,   
-  28              MODE_SANGDAN = 1,  
-  29              MODE_BLINK = 2     
-  30          } system_mode_t;
-  31          
-  32          volatile system_mode_t mode = MODE_NORMAL;
-  33          
-  34          
-  35          led_state_t state = STATE_LED1;
-  36          unsigned int state_timer = 0;
-  37          
-  38          void timer0_isr(void) interrupt 1
-  39          {
-  40   1          TH0 = 0xFC;
-  41   1          TL0 = 0x66;   
-  42   1          ms_tick++;
-  43   1      }
-  44          
-  45          
-  46          void timer0_init(void)
-  47          {
-  48   1          TMOD |= 0x01;  
-  49   1          TH0 = 0xFC;
-  50   1          TL0 = 0x66;
-  51   1          ET0 = 1;
-  52   1          TR0 = 1;
-  53   1      }
-  54          
-C51 COMPILER V9.60.0.0   KT                                                                12/17/2025 23:26:26 PAGE 2   
+  11          unsigned char digit_patterns[] = {
+  12              0x3F,   // 0
+  13              0x06,   // 1
+  14              0x5B,   // 2
+  15              0x4F,   // 3
+  16              0x66,   // 4
+  17              0x6D,   // 5
+  18              0x7D,   // 6
+  19              0x07,   // 7
+  20              0x7F,   // 8
+  21              0x6F    // 9
+  22          };
+  23          unsigned char value1 =  0x00;
+  24          unsigned char value2 = 0x00;  
+  25          unsigned char value3 = 0x00;  
+  26          
+  27          void main(void)
+  28          {   
+  29   1          SEGMENT_PORT = 0x00;                
+  30   1          while (1)
+  31   1          {
+  32   2                      SELECT_PORT = (0 << 2); 
+  33   2                      SEGMENT_PORT = digit_patterns[value1];
+  34   2                      delay_ms(2);
+  35   2                      SELECT_PORT = (1 << 2); 
+  36   2                      SEGMENT_PORT = digit_patterns[value2];
+  37   2                      delay_ms(2);
+  38   2                      SELECT_PORT = (2 << 2); 
+  39   2                      SEGMENT_PORT = digit_patterns[value3];
+  40   2                      delay_ms(2);
+  41   2                      
+  42   2                      value1++;
+  43   2              if(value1 == 0x09)   
+  44   2              {
+  45   3                  value1 = 0x00;
+  46   3                  value2++;      
+  47   3                  if(value2 == 0x09)
+  48   3                              {
+  49   4                                  value2 = 0x00;
+  50   4                                  value3++;
+  51   4                                  if(value3 == 0x00)
+  52   4                                      value3 = 0x09;
+  53   4                                  }
+  54   3              }
+C51 COMPILER V9.60.0.0   KT                                                                12/18/2025 10:48:29 PAGE 2   
 
-  55          void delay_ms(unsigned int ms) {
-  56   1          unsigned int i, j;
-  57   1          for (i = 0; i < ms; i++)
-  58   1              for (j = 0; j < 123; j++);
-  59   1      }
-  60          void external0_isr(void) interrupt 0
-  61          {
-  62   1        LED1 = LED2 = LED3 = 0;
-  63   1        delay_ms(period);
-  64   1      }
-  65          
-  66          void external1_isr(void) interrupt 2
-  67          {
-  68   1          period += 100;
-  69   1          if(period > 900) period = 100;
-  70   1      }
-  71          
-  72          unsigned char digit_patterns[] = {
-  73              0x3F,   // 0
-  74              0x06,   // 1
-  75              0x5B,   // 2
-  76              0x4F,   // 3
-  77              0x66,   // 4
-  78              0x6D,   // 5
-  79              0x7D,   // 6
-  80              0x07,   // 7
-  81              0x7F,   // 8
-  82              0x6F    // 9
-  83          };
-  84          void display_digit(unsigned char index, unsigned char value, unsigned char dot)
-  85          {
-  86   1          if (dot == 0){
-  87   2            SELECT_PORT = (index << 2);
-  88   2            SEGMENT_PORT = digit_patterns[value];
-  89   2            delay_ms(1);
-  90   2          }
-  91   1          else 
-  92   1          {
-  93   2            SELECT_PORT = (index << 2);
-  94   2            SEGMENT_PORT = digit_patterns[value] | 0x80;
-  95   2            delay_ms(1);
-  96   2          }
-  97   1            
-  98   1      }
-  99          unsigned char pattern_led[] = {
- 100              0xFF,0xFE,0xFC,0xF8,0xF0,0xE0,0xC0,0x80, 0x00
- 101          };
- 102          void effect_sangdan()
- 103          {
- 104   1          unsigned char i;
- 105   1          for(i=0;i<9;i++){
- 106   2              P1 = pattern_led[i];
- 107   2              display_digit(5,period/1000,0);
- 108   2              delay_ms(period);
- 109   2          }
- 110   1      }
- 111          void effect_choptat()
- 112          {
- 113   1          unsigned char i;
- 114   1          for(i=0;i<8;i++){
- 115   2              P1 = 0x00;
- 116   2              display_digit(5,period/1000,0);
-C51 COMPILER V9.60.0.0   KT                                                                12/17/2025 23:26:26 PAGE 3   
-
- 117   2              delay_ms(period);
- 118   2      
- 119   2              P1 = 0xFF;
- 120   2              delay_ms(period);
- 121   2          }
- 122   1      }
- 123          
- 124          
- 125          void UART_Init(void) {
- 126   1          SCON = 0x50;        // UART mode 1, enable receiver
- 127   1          TMOD &= 0x0F;       // Clear Timer1 config
- 128   1          TMOD |= 0x20;       // Timer1 mode 2
- 129   1          TH1 = 0xFD;         // Baud 9600 (11.0592 MHz)
- 130   1          TR1 = 1;            // Start Timer1
- 131   1          TI = 1;             // Allow first transmit
- 132   1      }
- 133          
- 134          void UART_SendChar(char c) {
- 135   1          while (!TI);   
- 136   1          TI = 0;        
- 137   1          SBUF = c;      
- 138   1      }
- 139          
- 140          void UART_SendString(char *str) {
- 141   1          while (*str) {
- 142   2              UART_SendChar(*str);  
- 143   2              str++;                
- 144   2          }
- 145   1      }
- 146          void Process_Command(void)
- 147          {
- 148   1          if(cmd[0] == '0' && cmd[1] == '0')
- 149   1          {
- 150   2              mode = MODE_NORMAL;
- 151   2              state = STATE_LED1;
- 152   2              state_timer = 0;
- 153   2              UART_SendString("\r\nMODE 00: NORMAL 3 LED\r\n");
- 154   2          }
- 155   1          else if(cmd[0] == '0' && cmd[1] == '1')
- 156   1          {
- 157   2              mode = MODE_SANGDAN;
- 158   2              UART_SendString("\r\nMODE 01: SANG DAN\r\n");
- 159   2          }
- 160   1          else if(cmd[0] == '0' && cmd[1] == '2')
- 161   1          {
- 162   2              mode = MODE_BLINK;
- 163   2              UART_SendString("\r\nMODE 02: BLINK 8 LAN\r\n");
- 164   2          }
- 165   1          else
- 166   1          {
- 167   2              UART_SendString("\r\nLENH SAI! DUNG: 00 / 01 / 02\r\n");
- 168   2          }
- 169   1      }
- 170          
- 171          
- 172          void UART_Receive_Handler(void)
- 173          {
- 174   1          if(RI)
- 175   1          {
- 176   2              RI = 0;
- 177   2              cmd[uart_index] = SBUF;   
- 178   2              uart_index++;
-C51 COMPILER V9.60.0.0   KT                                                                12/17/2025 23:26:26 PAGE 4   
-
- 179   2              if(uart_index >= 2)
- 180   2              {
- 181   3                  Process_Command();     
- 182   3                  uart_index = 0;        
- 183   3              }
- 184   2          }
- 185   1      }
- 186          
- 187          
- 188          unsigned int remain_s;
- 189          
- 190          void main(void)
- 191          {
- 192   1          LED1 = LED2 = LED3 = 1;   
- 193   1          IT0 = 1;  
- 194   1          IT1 = 1;   
- 195   1          EX0 = 1;   
- 196   1          EX1 = 1;   
- 197   1          EA  = 1;  
- 198   1          EA = 1;
- 199   1          timer0_init();
- 200   1          UART_Init();
- 201   1          UART_SendString("\r\n=== DIEU KHIEN LED QUA UART ===\r\n");
- 202   1          UART_SendString("Nhap lenh (VD: 00, 01,02)\r\n");
- 203   1      
- 204   1          while(1)
- 205   1          {
- 206   2          UART_Receive_Handler();
- 207   2          switch(mode)
- 208   2              {
- 209   3                  case MODE_NORMAL:
- 210   3                  
- 211   3                      if(ms_tick >= 1)     
- 212   3                      {
- 213   4                          ms_tick = 0;
- 214   4                          state_timer++;
- 215   4                                          ms_tick++;
- 216   4                                      
- 217   4                          switch(state)
- 218   4                          {
- 219   5                              case STATE_LED1:
- 220   5                                  LED1 = 0;   
- 221   5                                  LED2 = 1;
- 222   5                                  LED3 = 1;
- 223   5      
- 224   5                                  if(state_timer >= T1)
- 225   5                                  {
- 226   6                                      state_timer = 0;
- 227   6                                      state = STATE_LED2;
- 228   6                                  }
- 229   5                                                      remain_s = (T1 - state_timer) / 100;
- 230   5                                                      display_digit(7,remain_s,0);
- 231   5                                  break;
- 232   5      
- 233   5                              case STATE_LED2:
- 234   5                                  LED2 = 0;
- 235   5                                  LED1 = 1;
- 236   5                                  LED3 = 1;
- 237   5      
- 238   5                                  if(state_timer >= T2)
- 239   5                                  {
- 240   6                                      state_timer = 0;
-C51 COMPILER V9.60.0.0   KT                                                                12/17/2025 23:26:26 PAGE 5   
-
- 241   6                                      state = STATE_LED3;
- 242   6                                  }
- 243   5                                                      remain_s = (T2 - state_timer) / 100;
- 244   5                                                      display_digit(7,remain_s,0);
- 245   5                                  
- 246   5                                  break;
- 247   5      
- 248   5                              case STATE_LED3:
- 249   5                                  LED3 = 0;
- 250   5                                  LED1 = 1;
- 251   5                                  LED2 = 1;
- 252   5      
- 253   5                                  if(state_timer >= T3)
- 254   5                                  {
- 255   6                                      state_timer = 0;
- 256   6                                      state = STATE_LED1;
- 257   6                                  }
- 258   5                                                      remain_s = (T3 - state_timer) / 100;
- 259   5                                                      display_digit(7,remain_s,0);
- 260   5                                  
- 261   5                                  break;
- 262   5                          }
- 263   4                                      display_digit(5,period/100,0);
- 264   4                                      
- 265   4                      }
- 266   3                      break;
- 267   3                  case MODE_SANGDAN:
- 268   3                      effect_sangdan();
- 269   3                      break;
- 270   3                  case MODE_BLINK:
- 271   3                      effect_choptat();
- 272   3                      break;
- 273   3              }
- 274   2          }
- 275   1      }
+  55   2              delay_ms(20);  
+  56   2                  
+  57   2                      
+  58   2              
+  59   2          }
+  60   1      }
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =    717    ----
-   CONSTANT SIZE    =    170    ----
+   CODE SIZE        =    119    ----
+   CONSTANT SIZE    =   ----    ----
    XDATA SIZE       =   ----    ----
    PDATA SIZE       =   ----    ----
-   DATA SIZE        =     33       3
+   DATA SIZE        =     13    ----
    IDATA SIZE       =   ----    ----
    BIT SIZE         =   ----    ----
 END OF MODULE INFORMATION.

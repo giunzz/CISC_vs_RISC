@@ -98,6 +98,8 @@ void external1_isr(void) interrupt 2
     if(period2 > 2000) period2 = 500;
 }
 
+
+
 void main()
 {
     LED1 = 1;
