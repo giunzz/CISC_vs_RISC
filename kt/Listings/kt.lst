@@ -1,4 +1,4 @@
-C51 COMPILER V9.60.0.0   KT                                                                12/18/2025 10:48:29 PAGE 1   
+C51 COMPILER V9.60.0.0   KT                                                                12/18/2025 10:56:58 PAGE 1   
 
 
 C51 COMPILER V9.60.0.0, COMPILATION OF MODULE KT
@@ -9,75 +9,213 @@ COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE kt.c OPTIMIZE(8,SPEED) BROWSE DE
 line level    source
 
    1          #include <REGX51.H>   
-   2          #define SEGMENT_PORT P0  
-   3          #define SELECT_PORT  P2   
-   4          
-   5          void delay_ms(unsigned int ms) {
-   6   1          unsigned int i, j;
-   7   1          for (i = 0; i < ms; i++)
-   8   1              for (j = 0; j < 123; j++);
-   9   1      }
-  10          
-  11          unsigned char digit_patterns[] = {
-  12              0x3F,   // 0
-  13              0x06,   // 1
-  14              0x5B,   // 2
-  15              0x4F,   // 3
-  16              0x66,   // 4
-  17              0x6D,   // 5
-  18              0x7D,   // 6
-  19              0x07,   // 7
-  20              0x7F,   // 8
-  21              0x6F    // 9
-  22          };
-  23          unsigned char value1 =  0x00;
-  24          unsigned char value2 = 0x00;  
-  25          unsigned char value3 = 0x00;  
-  26          
-  27          void main(void)
-  28          {   
-  29   1          SEGMENT_PORT = 0x00;                
-  30   1          while (1)
-  31   1          {
-  32   2                      SELECT_PORT = (0 << 2); 
-  33   2                      SEGMENT_PORT = digit_patterns[value1];
-  34   2                      delay_ms(2);
-  35   2                      SELECT_PORT = (1 << 2); 
-  36   2                      SEGMENT_PORT = digit_patterns[value2];
-  37   2                      delay_ms(2);
-  38   2                      SELECT_PORT = (2 << 2); 
-  39   2                      SEGMENT_PORT = digit_patterns[value3];
-  40   2                      delay_ms(2);
-  41   2                      
-  42   2                      value1++;
-  43   2              if(value1 == 0x09)   
-  44   2              {
-  45   3                  value1 = 0x00;
-  46   3                  value2++;      
-  47   3                  if(value2 == 0x09)
-  48   3                              {
-  49   4                                  value2 = 0x00;
-  50   4                                  value3++;
-  51   4                                  if(value3 == 0x00)
-  52   4                                      value3 = 0x09;
-  53   4                                  }
-  54   3              }
-C51 COMPILER V9.60.0.0   KT                                                                12/18/2025 10:48:29 PAGE 2   
+   2          
+   3          #define SEGMENT_PORT P0  
+   4          #define SELECT_PORT  P2   
+   5          
+   6          unsigned char cnt = 0;
+   7          char cmd[3];
+   8          unsigned char uart_index = 0;
+   9          
+  10          void delay_ms(unsigned int ms) {
+  11   1          unsigned int i, j;
+  12   1          for (i = 0; i < ms; i++)
+  13   1              for (j = 0; j < 123; j++);
+  14   1      }
+  15          
+  16          unsigned char digit_patterns[] = {
+  17              0x3F,   // 0
+  18              0x06,   // 1
+  19              0x5B,   // 2
+  20              0x4F,   // 3
+  21              0x66,   // 4
+  22              0x6D,   // 5
+  23              0x7D,   // 6
+  24              0x07,   // 7
+  25              0x7F,   // 8
+  26              0x6F    // 9
+  27          };
+  28          
+  29          // 8 values of led7seg
+  30          unsigned char led7seg[8] = {0,1,2,3,4,5,6,7};
+  31          unsigned char index   = 0;
+  32          
+  33          unsigned char pattern_led[] = {
+  34              0xFF,0xFE,0xFC,0xF8,0xF0,0xE0,0xC0,0x80, 0x00
+  35          };
+  36          
+  37          void ISR_Timer0() interrupt 1
+  38          {
+  39   1          unsigned char display_code;
+  40   1          TH0 = 0xF8;
+  41   1          TL0 = 0x30;
+  42   1      
+  43   1          SEGMENT_PORT = 0x00; 
+  44   1          if (index < 2) {
+  45   2              SELECT_PORT = (index << 2);
+  46   2              display_code = digit_patterns[led7seg[index]];
+  47   2              SEGMENT_PORT = display_code;
+  48   2              index++;
+  49   2          } else {
+  50   2              index = 0;
+  51   2          }
+  52   1      }
+  53          void update_display(unsigned char led_value, unsigned char cnt)
+  54          {
+C51 COMPILER V9.60.0.0   KT                                                                12/18/2025 10:56:58 PAGE 2   
 
-  55   2              delay_ms(20);  
-  56   2                  
-  57   2                      
-  58   2              
-  59   2          }
-  60   1      }
+  55   1          led7seg[0] = led_value; 
+  56   1          led7seg[1] = cnt;       
+  57   1      }
+  58          
+  59          void setup_led7seg_timer0_2ms(void)
+  60          {
+  61   1        
+  62   1          SEGMENT_PORT = 0x00; 
+  63   1          index = 0;
+  64   1          TMOD &= 0xF0; 
+  65   1          TMOD |= 0x01;
+  66   1          TH0 = 0xF8;   
+  67   1          TL0 = 0x30;
+  68   1          IE  = 0x82;   
+  69   1          TR0 = 1;     
+  70   1      }
+  71          
+  72          void effect_sangdan()
+  73          {
+  74   1          unsigned char i;
+  75   1          unsigned char old = cnt;
+  76   1          for(i=0;i<9;i++){
+  77   2              if(cnt != old) break; 
+  78   2              P1 = pattern_led[i];
+  79   2              update_display(i,cnt);
+  80   2              delay_ms(200);
+  81   2          }
+  82   1      }
+  83          
+  84          void effect_tatdan()
+  85          {
+  86   1          char i;
+  87   1          unsigned char old = cnt;
+  88   1          for(i=8; i >= 0; i--){
+  89   2              if(cnt != old) break; 
+  90   2              P1 = pattern_led[i];
+  91   2              update_display(i,cnt);
+  92   2              delay_ms(200);
+  93   2          }
+  94   1      }
+  95          
+  96          void effect_choptat()
+  97          {
+  98   1          unsigned char i;
+  99   1          unsigned char old = cnt;
+ 100   1          for(i=0;i<8;i++){
+ 101   2              if(cnt != old) break; 
+ 102   2              P1 = 0x00;
+ 103   2              update_display(0,cnt);
+ 104   2              delay_ms(200);
+ 105   2              if(cnt != old) break; 
+ 106   2              P1 = 0xFF;
+ 107   2              update_display(8,cnt);
+ 108   2              delay_ms(200);
+ 109   2          }
+ 110   1      }
+ 111          
+ 112          // P3^2
+ 113          void external0_isr(void) interrupt 0
+ 114          {
+ 115   1          cnt++;
+ 116   1          if(cnt > 3) cnt = 0;
+C51 COMPILER V9.60.0.0   KT                                                                12/18/2025 10:56:58 PAGE 3   
+
+ 117   1      
+ 118   1      }
+ 119          
+ 120          void external1_isr(void) interrupt 2
+ 121          {
+ 122   1          cnt = (cnt + 3) % 4;
+ 123   1      }
+ 124          void UART_Init(void) {
+ 125   1          SCON = 0x50;        // UART mode 1, enable receiver
+ 126   1          TMOD &= 0x0F;       // Clear Timer1 config
+ 127   1          TMOD |= 0x20;       // Timer1 mode 2
+ 128   1          TH1 = 0xFD;         // Baud 9600 (11.0592 MHz)
+ 129   1          TR1 = 1;            // Start Timer1
+ 130   1          TI = 1;             // Allow first transmit
+ 131   1      }
+ 132          
+ 133          void UART_SendChar(char c) {
+ 134   1          while (!TI);   
+ 135   1          TI = 0;        
+ 136   1          SBUF = c;      
+ 137   1      }
+ 138          
+ 139          void UART_SendString(char *str) {
+ 140   1          while (*str) {
+ 141   2              UART_SendChar(*str);  
+ 142   2              str++;                
+ 143   2          }
+ 144   1      }
+ 145          void Process_Command(void)
+ 146          {
+ 147   1          cnt =  cmd[0] - '0';
+ 148   1          UART_SendString("\r\nSet OK\r\n");
+ 149   1      }
+ 150          
+ 151          void UART_Receive_Handler(void)
+ 152          {
+ 153   1          if(RI)
+ 154   1          {
+ 155   2              RI = 0;
+ 156   2              cmd[uart_index] = SBUF;   
+ 157   2              uart_index++;
+ 158   2              if(uart_index >= 1)
+ 159   2              {
+ 160   3                  Process_Command();     
+ 161   3                  uart_index = 0;        
+ 162   3              }
+ 163   2          }
+ 164   1      }
+ 165          void scan_led()
+ 166          {
+ 167   1        effect_sangdan();
+ 168   1        effect_tatdan();
+ 169   1        effect_choptat();
+ 170   1      }
+ 171          
+ 172          void main()
+ 173          {
+ 174   1            
+ 175   1           
+ 176   1          UART_Init();
+ 177   1          UART_SendString("\r\n=== DIEU KHIEN LED QUA UART ===\r\n");
+ 178   1          UART_SendString("Nhap lenh (VD: 0,1,2,3)\r\n");
+C51 COMPILER V9.60.0.0   KT                                                                12/18/2025 10:56:58 PAGE 4   
+
+ 179   1          setup_led7seg_timer0_2ms();
+ 180   1          IT0 = 1;  
+ 181   1          IT1 = 1;   
+ 182   1          EX0 = 1;   
+ 183   1          EX1 = 1;   
+ 184   1          EA  = 1;    
+ 185   1          cnt = 0;
+ 186   1          while (1)
+ 187   1          {
+ 188   2            UART_Receive_Handler();
+ 189   2            if(cnt == 0) scan_led();
+ 190   2            if(cnt == 1) effect_sangdan();
+ 191   2            if(cnt == 2) effect_tatdan();
+ 192   2            if(cnt == 3) effect_choptat();
+ 193   2          }
+ 194   1      }
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =    119    ----
-   CONSTANT SIZE    =   ----    ----
+   CODE SIZE        =    471    ----
+   CONSTANT SIZE    =     73    ----
    XDATA SIZE       =   ----    ----
    PDATA SIZE       =   ----    ----
-   DATA SIZE        =     13    ----
+   DATA SIZE        =     33       3
    IDATA SIZE       =   ----    ----
    BIT SIZE         =   ----    ----
 END OF MODULE INFORMATION.
