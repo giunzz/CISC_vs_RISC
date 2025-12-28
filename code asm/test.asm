@@ -1,133 +1,29 @@
-; Bai KT ASM: Hieu ung tat dan
-SEGMENT_PORT EQU P0
-VALUE    DATA 30H 
-T DATA 31H 
+Bắt đầu
 
-ORG 0000H
-	SJMP MAIN
-	
-MAIN: 
-	SETB P3.0 ; C
-	SETB P3.1 ; D
-	;MOV VALUE, #4
-	LCALL EFFECT_TATDAN
+Khai báo:
+    SEG_CODE[8]  // Mảng mã LED 7 đoạn cho các số 1 → 8
+    i, bit       // Biến đếm
+    DATA_PIN     // Chân dữ liệu (ví dụ P1.0)
+    CLK_PIN      // Chân xung clock (ví dụ P1.1)
+    LATCH_PIN    // Chân chốt dữ liệu (ví dụ P1.2)
 
-EFFECT_TATDAN:
-	MOV R0, #000H
-	MOV VALUE, #00H
-TATDAN_LOOP:
-	JNB P3.0, CHECK_C 
-	LCALL CHECK
-	;MOV P2, A
-	;SETB P2.4
-	;SETB P2.5
-	;SETB P2.6
-	;SETB P2.7
-	;LCALL DELAY200ms
-	;LCALL DELAY1S
-	;LCALL DO_COUNT
-	;RL A 
-	;ORL A, #01H  
-	;CJNE A, #01FH, TATDAN_LOOP 
-	;SJMP EFFECT_TATDAN
-CHECK:
-	JNB P3.0, CHECK_C 
-	MOV DPTR, #TABLE
-    MOV A, VALUE
-    MOVC A, @A+DPTR      
-    MOV SEGMENT_PORT, A  
-	JNB P3.0, CHECK_C 
-	MOV P2, R0
-	SETB P2.4
-	SETB P2.5
-	SETB P2.6
-	SETB P2.7
-	JNB P3.0, CHECK_C 
-    LCALL DELAY1S
-    JNB P3.0, CHECK_C 
-	INC VALUE
-	MOV A, R0
-	RL A 
-	ORL A, #01H 
-	MOV R0, A
-	CJNE R0, #01FH, CHECK
-	JNB P3.0, CHECK_C 
-	MOV P2, R0
-	SETB P2.4
-	SETB P2.5
-	SETB P2.6
-	SETB P2.7
-	JNB P3.0, CHECK_C 
-	MOV VALUE, #00H
-	SJMP EFFECT_TATDAN
-CHECK_C:
-	JNB P3.1, CHECK_D
-	MOV A, #000H
-	MOV P2, A
-	SETB P2.4
-	SETB P2.5
-	SETB P2.6
-	SETB P2.7
-	
-	LCALL CHECK_C
-CHECK_D:
-	SJMP CHECK
-	
-DELAY1S:
-    MOV R3, #5
-L1:
-    LCALL DELAY200ms
-    DJNZ R3, L1
-    RET
+Khởi tạo:
+    Cấu hình DATA_PIN, CLK_PIN, LATCH_PIN là OUTPUT
+    Gán mã hiển thị cho SEG_CODE[1] → SEG_CODE[8]
 
-DELAY200ms:
-    MOV R2, #200
-L2:
-    MOV R1, #200
-L1_1:
-    NOP
-    NOP
-    NOP
-    DJNZ R1, L1_1
-    DJNZ R2, L2
-    RET
+Vòng lặp vô hạn:
+    Cho i chạy từ 1 đến 8:
+        Lấy mã hiển thị = SEG_CODE[i]
 
-DELAY500ms:
-    MOV R3, #2
-L1_500:
-    LCALL DELAY250ms
-    DJNZ R3, L1_500
-    RET
-	
-DELAY250ms:
-    MOV R2, #250
-L2_500:
-    MOV R1, #250
-L1_1_500:
-    NOP
-    NOP
-    NOP
-    DJNZ R1, L1_1_500
-    DJNZ R2, L2_500
-    RET
-DEBOUNCE:              ; 20ms debounce
-    MOV R2, #40
-DB1:
-    MOV R1, #250
-DB2:
-    DJNZ R1, DB2
-    DJNZ R2, DB1
-    RET
+        Cho bit chạy từ 0 đến 7:
+            Xuất bit hiện tại của mã hiển thị ra DATA_PIN
+            Tạo xung CLK_PIN (0 → 1 → 0) để dịch bit
 
-TABLE:
-    DB 03FH
-    DB 006H
-    DB 05BH
-    DB 04FH
-    DB 066H
-    DB 06DH
-    DB 07DH
-    DB 007H
-    DB 07FH
-    DB 06FH
-END
+        Tạo xung LATCH_PIN để chốt dữ liệu ra LED 7 đoạn
+        Tạo độ trễ để quan sát LED
+
+    Kết thúc vòng for
+
+Quay lại vòng lặp vô hạn
+
+Kết thúc
